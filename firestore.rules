@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getUserRole() == 'ADMIN' || request.auth.token.admin == true);
+    }
+
+    function isRM() {
+      return isAuthenticated() && (getUserRole() == 'RM' || isAdmin());
+    }
+
+    function isAccounts() {
+      return isAuthenticated() && (getUserRole() == 'ACCOUNTS' || isAdmin());
+    }
+
+    function isCentreUser(centreId) {
+      return isAuthenticated() && (
+        isAdmin() ||
+        (getUserRole() == 'CENTRE_USER' && request.auth.token.assignedCentreId == centreId)
+      );
+    }
+
+    // Health Centres collection
+    match /centres/{centreId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Daily Reports
+    match /dailyReports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isRM() || isAccounts() || isCentreUser(resource.data.centreId)
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() || isCentreUser(request.resource.data.centreId)
+      ) && request.resource.data.totalDailyIncome >= 0
+        && request.resource.data.totalDailyExpense >= 0;
+      allow update: if isAuthenticated() && (
+        isAdmin() || isAccounts() ||
+        (isCentreUser(resource.data.centreId) && resource.data.status == 'DRAFT')
+      );
+      allow delete: if isAdmin(); // Never delete directly; soft delete with audit trail preferred
+    }
+
+    // Weekly Reports
+    match /weeklyReports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isRM() || isAccounts() || isCentreUser(resource.data.centreId)
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() || isCentreUser(request.resource.data.centreId)
+      );
+      allow update: if isAuthenticated() && (isAdmin() || isAccounts());
+      allow delete: if isAdmin();
+    }
+
+    // Targets
+    match /targets/{targetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // App Settings
+    match /appSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs (Immutable Append-Only)
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && (isAdmin() || isAccounts());
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Strict immutability
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

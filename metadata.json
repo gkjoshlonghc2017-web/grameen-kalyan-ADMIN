@@ -1,0 +1,6 @@
+{
+  "name": "গ্রামীণ কল্যাণ কেরানীগঞ্জ",
+  "description": "গ্রামীণ কল্যাণ কেরানীগঞ্জের ১১টি স্বাস্থ্য কেন্দ্রের দৈনিক ও সাপ্তাহিক আয়-ব্যয়, রিকভারি, লক্ষ্যমাত্রা ও অডিট হিসাব ব্যবস্থাপনা অ্যাপ্লিকেশন।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
